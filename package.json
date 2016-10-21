@@ -1,0 +1,39 @@
+{
+  "name": "node-typechecker",
+  "version": "1.0.0",
+  "description": "Utility that allows to check that an object validates a predefined contract",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon --watch . -e ts --exec 'ts-node index.ts'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/RemyJeancolas/node-typechecker.git"
+  },
+  "keywords": [
+    "type",
+    "checker",
+    "validator",
+    "typechecker",
+    "decorator",
+    "typescript",
+    "reflection",
+    "metadata",
+    "reflect",
+    "entity",
+    "validation"
+  ],
+  "author": "Rémy Jeancolas",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/RemyJeancolas/node-typechecker/issues"
+  },
+  "homepage": "https://github.com/RemyJeancolas/node-typechecker#readme",
+  "dependencies": {
+    "nodemon": "^1.11.0",
+    "reflect-metadata": "^0.1.8",
+    "ts-node": "^1.6.0",
+    "typescript": "^2.0.3"
+  }
+}
