@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "commonjs",
-    "outDir": "./build/",
+    "outDir": "./js/",
     "sourceMap": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
@@ -11,6 +11,7 @@
     "emitDecoratorMetadata": true
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "tests"
   ]
 }

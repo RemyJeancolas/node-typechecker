@@ -2,10 +2,12 @@
   "name": "node-typechecker",
   "version": "1.0.0",
   "description": "Utility that allows to check that an object validates a predefined contract",
-  "main": "index.js",
+  "main": "js/TypeChecker.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon --watch . -e ts --exec 'ts-node index.ts'"
+    "dev": "nodemon --watch . -e ts --exec 'ts-node index.ts'",
+    "test": "mocha tests/TypeChecker.ts --compilers ts:ts-node/register --bail",
+    "cover": "nyc --report-dir tests/coverage npm run test",
+    "build": "rm -rf js && tsc"
   },
   "repository": {
     "type": "git",
@@ -31,9 +33,35 @@
   },
   "homepage": "https://github.com/RemyJeancolas/node-typechecker#readme",
   "dependencies": {
+    "reflect-metadata": "^0.1.8"
+  },
+  "devDependencies": {
+    "@types/chai": "^3.4.34",
+    "@types/mocha": "^2.2.32",
+    "@types/sinon": "^1.16.31",
+    "chai": "^3.5.0",
+    "mocha": "^3.1.2",
     "nodemon": "^1.11.0",
-    "reflect-metadata": "^0.1.8",
+    "nyc": "^8.3.2",
+    "sinon": "^1.17.6",
     "ts-node": "^1.6.0",
     "typescript": "^2.0.3"
+  },
+  "nyc": {
+    "include": [
+      "lib/*.ts"
+    ],
+    "extension": [
+      ".ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ],
+    "reporter": [
+      "html",
+      "text-summary",
+      "lcov"
+    ],
+    "all": true
   }
 }

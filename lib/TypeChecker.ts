@@ -80,11 +80,15 @@ export function PropertyCheck(params: PropertyCheckParams = {}): any {
     };
 }
 
-export function validate(input: any, expectedType: any): void {
+export function validate(input: any, expectedType: any, arrayType: any = null): void {
     try {
-        validateInput(input, expectedType);
+        validateInput(input, expectedType, arrayType);
     } catch (e) {
-        throw new Error(`${(<ValidationError> e).fields.join(' -> ')}: ${e.message}`);
+        const fields = (<ValidationError> e).fields;
+        if (fields.length > 0) {
+            throw new Error(`${fields.join(' -> ')}: ${e.message}`);
+        }
+        throw new Error(e.message);
     }
 }
 
