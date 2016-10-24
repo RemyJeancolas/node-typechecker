@@ -1,6 +1,6 @@
 {
   "name": "node-typechecker",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Utility that allows to check that an object validates a predefined contract",
   "main": "js/TypeChecker.js",
   "scripts": {
@@ -52,9 +52,13 @@
     "ts-node": "^1.6.0",
     "typescript": "^2.0.3"
   },
+  "typings": "index.d.ts",
   "nyc": {
     "include": [
       "lib/*.ts"
+    ],
+    "exclude": [
+      "index.d.ts"
     ],
     "extension": [
       ".ts"
