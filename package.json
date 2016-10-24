@@ -7,6 +7,7 @@
     "dev": "nodemon --watch . -e ts --exec 'ts-node index.ts'",
     "test": "mocha tests/TypeChecker.ts --compilers ts:ts-node/register --bail",
     "cover": "nyc --report-dir tests/coverage npm run test",
+    "coveralls": "cat tests/coverage/lcov.info | ./node_modules/.bin/coveralls",
     "build": "rm -rf js && tsc"
   },
   "repository": {
@@ -26,6 +27,9 @@
     "entity",
     "validation"
   ],
+  "engines": {
+    "node": ">= 6.2.0"
+  },
   "author": "Rémy Jeancolas",
   "license": "MIT",
   "bugs": {
@@ -40,6 +44,7 @@
     "@types/mocha": "^2.2.32",
     "@types/sinon": "^1.16.31",
     "chai": "^3.5.0",
+    "coveralls": "^2.11.14",
     "mocha": "^3.1.2",
     "nodemon": "^1.11.0",
     "nyc": "^8.3.2",
