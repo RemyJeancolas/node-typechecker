@@ -7,6 +7,7 @@
     "dev": "nodemon --watch . -e ts --exec 'ts-node index.ts'",
     "test": "mocha tests/TypeChecker.ts --compilers ts:ts-node/register --bail",
     "cover": "nyc --report-dir tests/coverage npm run test",
+    "lint": "tslint -c tslint.json ./lib/TypeChecker.ts ./tests/TypeChecker.ts --format verbose",
     "coveralls": "cat tests/coverage/lcov.info | ./node_modules/.bin/coveralls",
     "build": "rm -rf js && tsc"
   },
@@ -50,6 +51,8 @@
     "nyc": "^8.3.2",
     "sinon": "^1.17.6",
     "ts-node": "^1.6.0",
+    "tslint": "^3.15.1",
+    "tslint-microsoft-contrib": "^2.0.13",
     "typescript": "^2.0.3"
   },
   "typings": "index.d.ts",

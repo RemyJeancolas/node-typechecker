@@ -4,13 +4,15 @@ const propertiesToCheck = Symbol('propertiesToCheck');
 const paramsToCheck = Symbol('paramsToCheck');
 
 export interface PropertyCheckParams {
-    type?: any;
+    type?: any; // tslint:disable-line:no-reserved-keywords
     arrayType?: any;
     required?: boolean;
     nullable?: boolean;
 }
 
-class ValidationError extends Error {
+export class ValidationError extends Error {}
+
+class InternalError extends Error {
     public fields: string[] = [];
 }
 
@@ -30,6 +32,7 @@ export function TypesCheck(target: any, propertyKey: string, descriptor: TypedPr
     };
 }
 
+// tslint:disable-next-line:no-reserved-keywords
 export function TypeCheck(type: any): any {
     return (target: any, propertyKey: string | symbol, parameterIndex: number): any => {
         if (!Array.isArray(target[paramsToCheck])) {
@@ -45,7 +48,8 @@ export function TypeCheck(type: any): any {
 export function PropertyCheck(params: PropertyCheckParams = {}): any {
     return (target: any, key: string | symbol): any => {
         // Define property type
-        const type = params.type ? params.type : Reflect.getMetadata("design:type", target, key);
+        // tslint:disable-next-line:no-reserved-keywords
+        const type = params.type ? params.type : Reflect.getMetadata('design:type', target, key);
 
         // Check if type is valid
         let expectedType: any;
@@ -68,7 +72,7 @@ export function PropertyCheck(params: PropertyCheckParams = {}): any {
         // If type is array, check array type if provided
         if (expectedType.constructor.name === 'Array' && params.arrayType) {
             try {
-                expectedType = new params.arrayType(); 
+                expectedType = new params.arrayType();
             } catch (e) {
                 delete params.arrayType;
             }
@@ -84,11 +88,11 @@ export function validate(input: any, expectedType: any, arrayType: any = null): 
     try {
         validateInput(input, expectedType, arrayType);
     } catch (e) {
-        const fields = (<ValidationError> e).fields;
+        const fields = (<InternalError> e).fields;
         if (fields.length > 0) {
-            throw new Error(`${fields.join(' -> ')}: ${e.message}`);
+            throw new ValidationError(`${fields.join(' -> ')}: ${e.message}`);
         }
-        throw new Error(e.message);
+        throw new ValidationError(e.message);
     }
 }
 
@@ -107,12 +111,12 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
             // Validate required
             if (input && input.hasOwnProperty(key)) {
                 if (!checkParams.nullable && input[key] == null) {
-                    const error = new ValidationError('Field can\'t be null');
+                    const error = new InternalError('Field can\'t be null');
                     error.fields.push(key);
                     throw error;
                 }
             } else if (checkParams.required) {
-                const error = new ValidationError('Field is required');
+                const error = new InternalError('Field is required');
                 error.fields.push(key);
                 throw error;
             }
@@ -122,7 +126,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
                 try {
                     validateInput(input[key], checkParams.type, checkParams.arrayType);
                 } catch (e) {
-                    (<ValidationError> e).fields.unshift(key);
+                    (<InternalError> e).fields.unshift(key);
                     throw e;
                 }
             }
@@ -133,7 +137,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
             const providedType = typeof input;
             if (constructorName === 'Array') {
                 if (!Array.isArray(input)) {
-                    throw new ValidationError(`Expecting array, received ${providedType} ${JSON.stringify(input)}`);
+                    throw new InternalError(`Expecting array, received ${providedType} ${JSON.stringify(input)}`);
                 }
                 if (arrayType) {
                     input.forEach(item => {
@@ -143,9 +147,9 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
             } else {
                 expectedType = typeof expectedType.valueOf();
                 if (providedType !== expectedType) {
-                    throw new ValidationError(`Expecting ${expectedType}, received ${providedType} ${JSON.stringify(input)}`);
+                    throw new InternalError(`Expecting ${expectedType}, received ${providedType} ${JSON.stringify(input)}`);
                 }
             }
-        }            
+        }
     }
 }

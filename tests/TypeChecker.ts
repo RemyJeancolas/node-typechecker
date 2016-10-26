@@ -102,7 +102,7 @@ describe('TypeChecker', () => {
         } catch (e) {
             error = e.message;
         }
-        expect(error).to.equal('bar: Field can\'t be null');
+        expect(error).to.equal('bar: Field can\'t be null', 'Null field error should be thrown');
 
         // Failed validation: missing required field on nested object
         const bar = new Bar();
