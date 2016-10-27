@@ -1,6 +1,6 @@
 {
   "name": "node-typechecker",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Utility that allows to check that an object validates a predefined contract",
   "main": "js/TypeChecker.js",
   "scripts": {
