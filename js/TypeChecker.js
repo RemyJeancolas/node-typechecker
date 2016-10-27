@@ -82,7 +82,7 @@ function validate(input, expectedType, arrayType = null) {
     catch (e) {
         const fields = e.fields;
         if (fields.length > 0) {
-            throw new ValidationError(`${fields.join(' -> ')}: ${e.message}`);
+            throw new ValidationError(`${fields.join('.')}: ${e.message}`);
         }
         throw new ValidationError(e.message);
     }

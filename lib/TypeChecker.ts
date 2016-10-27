@@ -91,7 +91,7 @@ export function validate(input: any, expectedType: any, arrayType: any = null): 
     } catch (e) {
         const fields = (<InternalError> e).fields;
         if (fields.length > 0) {
-            throw new ValidationError(`${fields.join(' -> ')}: ${e.message}`);
+            throw new ValidationError(`${fields.join('.')}: ${e.message}`);
         }
         throw new ValidationError(e.message);
     }

@@ -116,7 +116,7 @@ describe('TypeChecker', () => {
         } catch (e) {
             error = e.message;
         }
-        expect(error).to.equal('bar -> description3: Field is required'); // Description2 validation is ignored
+        expect(error).to.equal('bar.description3: Field is required'); // Description2 validation is ignored
 
         // Validation ok: description3 array type is ignored
         bar.description3 = <any> [3, 4];
@@ -128,7 +128,7 @@ describe('TypeChecker', () => {
         } catch (e) {
             error = e.message;
         }
-        expect(error).to.equal('bars[1] -> description: Expecting string, received number 4');
+        expect(error).to.equal('bars[1].description: Expecting string, received number 4');
     });
 
     it('TypeChecker::TypesCheck', () => {
