@@ -14,6 +14,7 @@ export class ValidationError extends Error {}
 
 class InternalError extends Error {
     public fields: string[] = [];
+    public index?: number;
 }
 
 export function TypesCheck(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>): any {
@@ -126,7 +127,8 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
                 try {
                     validateInput(input[key], checkParams.type, checkParams.arrayType);
                 } catch (e) {
-                    (<InternalError> e).fields.unshift(key);
+                    const propertyName = !isNaN(e.index) ? `${key}[${e.index}]` : key;
+                    (<InternalError> e).fields.unshift(propertyName);
                     throw e;
                 }
             }
@@ -140,8 +142,13 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
                     throw new InternalError(`Expecting array, received ${providedType} ${JSON.stringify(input)}`);
                 }
                 if (arrayType) {
-                    input.forEach(item => {
-                        validateInput(item, arrayType);
+                    input.forEach((item, index) => {
+                        try {
+                            validateInput(item, arrayType);
+                        } catch (e) {
+                            (<InternalError> e).index = index;
+                            throw e;
+                        }
                     });
                 }
             } else {

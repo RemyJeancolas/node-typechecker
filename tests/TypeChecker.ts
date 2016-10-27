@@ -19,6 +19,8 @@ class Foo {
     public hobbies: string[];
     @PropertyCheck()
     public bar: Bar;
+    @PropertyCheck({required: false, arrayType: Bar})
+    public bars: Bar[];
 }
 
 class Test {
@@ -92,7 +94,7 @@ describe('TypeChecker', () => {
         } catch (e) {
             error = e.message;
         }
-        expect(error).to.equal('hobbies: Expecting string, received number 3');
+        expect(error).to.equal('hobbies[0]: Expecting string, received number 3');
 
         // Failed validation: Non nullable property
         foo.hobbies = null;
@@ -119,6 +121,14 @@ describe('TypeChecker', () => {
         // Validation ok: description3 array type is ignored
         bar.description3 = <any> [3, 4];
         validate(foo, Foo);
+
+        foo.bars = <any> [bar, {description: 4}];
+        try {
+            validate(foo, Foo);
+        } catch (e) {
+            error = e.message;
+        }
+        expect(error).to.equal('bars[1] -> description: Expecting string, received number 4');
     });
 
     it('TypeChecker::TypesCheck', () => {
