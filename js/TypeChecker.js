@@ -3,6 +3,9 @@ require('reflect-metadata');
 const propertiesToCheck = Symbol('propertiesToCheck');
 const paramsToCheck = Symbol('paramsToCheck');
 class ValidationError extends Error {
+}
+exports.ValidationError = ValidationError;
+class InternalError extends Error {
     constructor() {
         super(...arguments);
         this.fields = [];
@@ -22,6 +25,7 @@ function TypesCheck(target, propertyKey, descriptor) {
     };
 }
 exports.TypesCheck = TypesCheck;
+// tslint:disable-next-line:no-reserved-keywords
 function TypeCheck(type) {
     return (target, propertyKey, parameterIndex) => {
         if (!Array.isArray(target[paramsToCheck])) {
@@ -37,7 +41,8 @@ exports.TypeCheck = TypeCheck;
 function PropertyCheck(params = {}) {
     return (target, key) => {
         // Define property type
-        const type = params.type ? params.type : Reflect.getMetadata("design:type", target, key);
+        // tslint:disable-next-line:no-reserved-keywords
+        const type = params.type ? params.type : Reflect.getMetadata('design:type', target, key);
         // Check if type is valid
         let expectedType;
         try {
@@ -77,9 +82,9 @@ function validate(input, expectedType, arrayType = null) {
     catch (e) {
         const fields = e.fields;
         if (fields.length > 0) {
-            throw new Error(`${fields.join(' -> ')}: ${e.message}`);
+            throw new ValidationError(`${fields.join(' -> ')}: ${e.message}`);
         }
-        throw new Error(e.message);
+        throw new ValidationError(e.message);
     }
 }
 exports.validate = validate;
@@ -98,13 +103,13 @@ function validateInput(input, expectedType, arrayType = null) {
             // Validate required
             if (input && input.hasOwnProperty(key)) {
                 if (!checkParams.nullable && input[key] == null) {
-                    const error = new ValidationError('Field can\'t be null');
+                    const error = new InternalError('Field can\'t be null');
                     error.fields.push(key);
                     throw error;
                 }
             }
             else if (checkParams.required) {
-                const error = new ValidationError('Field is required');
+                const error = new InternalError('Field is required');
                 error.fields.push(key);
                 throw error;
             }
@@ -114,7 +119,8 @@ function validateInput(input, expectedType, arrayType = null) {
                     validateInput(input[key], checkParams.type, checkParams.arrayType);
                 }
                 catch (e) {
-                    e.fields.unshift(key);
+                    const propertyName = !isNaN(e.index) ? `${key}[${e.index}]` : key;
+                    e.fields.unshift(propertyName);
                     throw e;
                 }
             }
@@ -126,18 +132,24 @@ function validateInput(input, expectedType, arrayType = null) {
             const providedType = typeof input;
             if (constructorName === 'Array') {
                 if (!Array.isArray(input)) {
-                    throw new ValidationError(`Expecting array, received ${providedType} ${JSON.stringify(input)}`);
+                    throw new InternalError(`Expecting array, received ${providedType} ${JSON.stringify(input)}`);
                 }
                 if (arrayType) {
-                    input.forEach(item => {
-                        validateInput(item, arrayType);
+                    input.forEach((item, index) => {
+                        try {
+                            validateInput(item, arrayType);
+                        }
+                        catch (e) {
+                            e.index = index;
+                            throw e;
+                        }
                     });
                 }
             }
             else {
                 expectedType = typeof expectedType.valueOf();
                 if (providedType !== expectedType) {
-                    throw new ValidationError(`Expecting ${expectedType}, received ${providedType} ${JSON.stringify(input)}`);
+                    throw new InternalError(`Expecting ${expectedType}, received ${providedType} ${JSON.stringify(input)}`);
                 }
             }
         }
