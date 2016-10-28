@@ -27,7 +27,7 @@ To use the type checker in your project, follow the snippet below:
 
 The node-typechecker type definitions are included in the npm package.
 
-**Important!** Node typechecker requires TypeScript >= 2.0 and the `experimentalDecorators` and `emitDecoratorMetadata` options in your tsconfig.json file.
+**Important!** Node typechecker requires TypeScript >= 1.8 and the `experimentalDecorators` and `emitDecoratorMetadata` options in your tsconfig.json file.
 ```js
 {
     "compilerOptions": {
