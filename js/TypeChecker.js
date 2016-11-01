@@ -56,6 +56,10 @@ function PropertyCheck(params = {}) {
         if (!Array.isArray(target[propertiesToCheck])) {
             target[propertiesToCheck] = [];
         }
+        // Create an array specific to current class to store properties to check, ignoring parent class decorators
+        if (!Array.isArray(target[propertiesToCheck][target.constructor.name])) {
+            target[propertiesToCheck][target.constructor.name] = [];
+        }
         params.type = type;
         params.required = (typeof params.required === 'boolean') ? params.required : true;
         params.nullable = (typeof params.nullable === 'boolean') ? params.nullable : false;
@@ -71,24 +75,26 @@ function PropertyCheck(params = {}) {
         else {
             delete params.arrayType;
         }
-        target[propertiesToCheck][key] = params;
+        target[propertiesToCheck][target.constructor.name][key] = params;
     };
 }
 exports.PropertyCheck = PropertyCheck;
-function validate(input, expectedType, arrayType = null) {
-    try {
-        validateInput(input, expectedType, arrayType);
-    }
-    catch (e) {
-        const fields = e.fields;
-        if (fields.length > 0) {
-            throw new ValidationError(`${fields.join('.')}: ${e.message}`);
+// tslint:disable-next-line:no-reserved-keywords
+function getParent(type) {
+    if (type && type.prototype) {
+        const parentPrototype = Object.getPrototypeOf(type.prototype);
+        if (parentPrototype && parentPrototype.constructor && parentPrototype.constructor.name !== 'Object') {
+            return parentPrototype.constructor;
         }
-        throw new ValidationError(e.message);
     }
+    return null;
 }
-exports.validate = validate;
 function validateInput(input, expectedType, arrayType = null) {
+    // Try to validate properties from parent class if existing
+    const parent = getParent(expectedType);
+    if (parent) {
+        validateInput(input, parent, arrayType);
+    }
     // Try to instantiate the expected type to see if it's valid 
     try {
         expectedType = new expectedType();
@@ -97,9 +103,10 @@ function validateInput(input, expectedType, arrayType = null) {
         return;
     }
     // If type has propertiesToCheck, it's a complex type with fields to validate
-    if (expectedType[propertiesToCheck]) {
-        Object.keys(expectedType[propertiesToCheck]).forEach(key => {
-            const checkParams = expectedType[propertiesToCheck][key];
+    const constructorName = expectedType.constructor.name;
+    if (expectedType[propertiesToCheck] && expectedType[propertiesToCheck][constructorName]) {
+        Object.keys(expectedType[propertiesToCheck][constructorName]).forEach(key => {
+            const checkParams = expectedType[propertiesToCheck][constructorName][key];
             // Validate required
             if (input && input.hasOwnProperty(key)) {
                 if (!checkParams.nullable && input[key] == null) {
@@ -127,7 +134,6 @@ function validateInput(input, expectedType, arrayType = null) {
         });
     }
     else {
-        const constructorName = expectedType.constructor.name;
         if (constructorName !== 'Object') {
             const providedType = typeof input;
             if (constructorName === 'Array') {
@@ -155,4 +161,17 @@ function validateInput(input, expectedType, arrayType = null) {
         }
     }
 }
+function validate(input, expectedType, arrayType = null) {
+    try {
+        validateInput(input, expectedType, arrayType);
+    }
+    catch (e) {
+        const fields = e.fields;
+        if (fields.length > 0) {
+            throw new ValidationError(`${fields.join('.')}: ${e.message}`);
+        }
+        throw new ValidationError(e.message);
+    }
+}
+exports.validate = validate;
 //# sourceMappingURL=TypeChecker.js.map

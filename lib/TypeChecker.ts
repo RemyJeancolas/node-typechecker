@@ -66,6 +66,11 @@ export function PropertyCheck(params: PropertyCheckParams = {}): any {
             target[propertiesToCheck] = [];
         }
 
+        // Create an array specific to current class to store properties to check, ignoring parent class decorators
+        if (!Array.isArray(target[propertiesToCheck][target.constructor.name])) {
+            target[propertiesToCheck][target.constructor.name] = [];
+        }
+
         params.type = type;
         params.required = (typeof params.required === 'boolean') ? params.required : true;
         params.nullable = (typeof params.nullable === 'boolean') ? params.nullable : false;
@@ -81,23 +86,28 @@ export function PropertyCheck(params: PropertyCheckParams = {}): any {
             delete params.arrayType;
         }
 
-        target[propertiesToCheck][key] = params;
+        target[propertiesToCheck][target.constructor.name][key] = params;
     };
 }
 
-export function validate(input: any, expectedType: any, arrayType: any = null): void {
-    try {
-        validateInput(input, expectedType, arrayType);
-    } catch (e) {
-        const fields = (<InternalError> e).fields;
-        if (fields.length > 0) {
-            throw new ValidationError(`${fields.join('.')}: ${e.message}`);
+// tslint:disable-next-line:no-reserved-keywords
+function getParent(type: any): any {
+    if (type && type.prototype) {
+        const parentPrototype = Object.getPrototypeOf(type.prototype);
+        if (parentPrototype && parentPrototype.constructor && parentPrototype.constructor.name !== 'Object') {
+            return parentPrototype.constructor;
         }
-        throw new ValidationError(e.message);
     }
+    return null;
 }
 
 function validateInput(input: any, expectedType: any, arrayType: any = null): void {
+    // Try to validate properties from parent class if existing
+    const parent = getParent(expectedType);
+    if (parent) {
+        validateInput(input, parent, arrayType);
+    }
+
     // Try to instantiate the expected type to see if it's valid 
     try {
         expectedType = new expectedType();
@@ -106,9 +116,10 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
     }
 
     // If type has propertiesToCheck, it's a complex type with fields to validate
-    if (expectedType[propertiesToCheck]) {
-        Object.keys(expectedType[propertiesToCheck]).forEach(key => {
-            const checkParams: PropertyCheckParams = expectedType[propertiesToCheck][key];
+    const constructorName = expectedType.constructor.name;
+    if (expectedType[propertiesToCheck] && expectedType[propertiesToCheck][constructorName]) {
+        Object.keys(expectedType[propertiesToCheck][constructorName]).forEach(key => {
+            const checkParams: PropertyCheckParams = expectedType[propertiesToCheck][constructorName][key];
             // Validate required
             if (input && input.hasOwnProperty(key)) {
                 if (!checkParams.nullable && input[key] == null) {
@@ -134,7 +145,6 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
             }
         });
     } else { // Else it's a basic type or a complex type with no validation
-        const constructorName = expectedType.constructor.name;
         if (constructorName !== 'Object') {
             const providedType = typeof input;
             if (constructorName === 'Array') {
@@ -158,5 +168,17 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
                 }
             }
         }
+    }
+}
+
+export function validate(input: any, expectedType: any, arrayType: any = null): void {
+    try {
+        validateInput(input, expectedType, arrayType);
+    } catch (e) {
+        const fields = (<InternalError> e).fields;
+        if (fields.length > 0) {
+            throw new ValidationError(`${fields.join('.')}: ${e.message}`);
+        }
+        throw new ValidationError(e.message);
     }
 }

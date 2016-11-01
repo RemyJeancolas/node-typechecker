@@ -34,6 +34,21 @@ class Test {
     }
 }
 
+class Parent {
+    @PropertyCheck()
+    public property1: string;
+}
+
+class A extends Parent {
+    @PropertyCheck()
+    public property2: string;
+}
+
+class B extends Parent {
+    @PropertyCheck()
+    public property3: string;
+}
+
 let error: string = null;
 describe('TypeChecker', () => {
     it('TypeChecker::validate Basic types', () => {
@@ -129,6 +144,27 @@ describe('TypeChecker', () => {
             error = e.message;
         }
         expect(error).to.equal('bars[1].description: Expecting string, received number 4');
+    });
+
+    it('TypeChecker::validate Class inheritance', () => {
+        const a = new A();
+        try {
+            validate(a, A);
+        } catch (e) {
+            error = e.message;
+        }
+        expect(error).to.equal('property1: Field is required');
+
+        a.property1 = 'foo';
+        try {
+            validate(a, A);
+        } catch (e) {
+            error = e.message;
+        }
+        expect(error).to.equal('property2: Field is required');
+
+        a.property2 = 'bar';
+        validate(a, A);
     });
 
     it('TypeChecker::TypesCheck', () => {
