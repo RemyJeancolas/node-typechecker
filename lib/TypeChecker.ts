@@ -161,6 +161,10 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
                         }
                     });
                 }
+            } else if (constructorName === 'Date') {
+                if (input instanceof Date !== true || typeof input.getTime !== 'function' || isNaN(input.getTime())) {
+                    throw new InternalError(`Expecting date, received ${providedType} ${JSON.stringify(input)}`);
+                }
             } else {
                 expectedType = typeof expectedType.valueOf();
                 if (providedType !== expectedType) {

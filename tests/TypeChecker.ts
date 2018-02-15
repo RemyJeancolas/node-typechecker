@@ -21,6 +21,8 @@ class Foo {
     public bar: Bar;
     @PropertyCheck({required: false, arrayType: Bar})
     public bars: Bar[];
+    @PropertyCheck({required: false})
+    public date?: Date;
 }
 
 class Test {
@@ -89,6 +91,27 @@ describe('TypeChecker', () => {
             error = e.message;
         }
         expect(error).to.equal('Expecting number, received string "foo"');
+    });
+
+    it('TypeChecker::validate Date', () => {
+        // Failed validation: number !== date
+        try {
+            validate(3, Date);
+        } catch (e) {
+            error = e.message;
+        }
+        expect(error).to.equal('Expecting date, received number 3');
+
+        // Validation ok
+        validate(new Date(), Date);
+
+        // Failed validation: invalid date
+        try {
+            validate(new Date('foo'), Date);
+        } catch (e) {
+            error = e.message;
+        }
+        expect(error).to.equal('Expecting date, received object null', 'Date validation should fail');
     });
 
     it('TypeChecker::validate Nested objects', () => {

@@ -1,5 +1,6 @@
 "use strict";
-require('reflect-metadata');
+Object.defineProperty(exports, "__esModule", { value: true });
+require("reflect-metadata");
 const propertiesToCheck = Symbol('propertiesToCheck');
 const paramsToCheck = Symbol('paramsToCheck');
 class ValidationError extends Error {
@@ -150,6 +151,11 @@ function validateInput(input, expectedType, arrayType = null) {
                             throw e;
                         }
                     });
+                }
+            }
+            else if (constructorName === 'Date') {
+                if (input instanceof Date !== true || typeof input.getTime !== 'function' || isNaN(input.getTime())) {
+                    throw new InternalError(`Expecting date, received ${providedType} ${JSON.stringify(input)}`);
                 }
             }
             else {
