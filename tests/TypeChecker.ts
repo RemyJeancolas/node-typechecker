@@ -51,155 +51,105 @@ class B extends Parent {
     public property3: string;
 }
 
-let error: string = null;
+class Y {
+    @PropertyCheck({required: false})
+    public readonly name?: string;
+}
+
 describe('TypeChecker', () => {
-    it('TypeChecker::validate Basic types', () => {
-        // Validation ok
-        validate('foo', String);
+    describe('validate()', () => {
+        it('should validate basic types', () => {
+            // Validation ok
+            validate('foo', String);
 
-        // Failed validation: string !== number
-        try {
-            validate('foo', Number);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('Expecting number, received string "foo"');
+            // Failed validation: string !== number
+            expect(() => validate('foo', Number)).to.throw('Expecting number, received string "foo"');
 
-        // Validation ok: anything matches object
-        validate('foo', Object);
+            // Validation ok: anything matches object
+            validate('foo', Object);
 
-        // Validation skipped with no error: invalid expected type
-        validate('foo', {});
-    });
+            // Validation skipped with no error: invalid expected type
+            validate('foo', <any> {});
+        });
 
-    it('TypeChecker::validate Array', () => {
-        // Failed validation: number !== array
-        try {
-            validate(3, Array);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('Expecting array, received number 3');
+        it('should validate arrays', () => {
+            // Failed validation: number !== array
+            expect(() => validate(3, Array)).to.throw('Expecting array, received number 3');
 
-        // Validation ok
-        validate(['foo'], Array);
+            // Validation ok
+            validate(['foo'], Array);
 
-        // Failed validation: array items (string) don't match expected type (number)
-        try {
-            validate(['foo'], Array, Number);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('Expecting number, received string "foo"');
-    });
+            // Failed validation: array items (string) don't match expected type (number)
+            expect(() => validate(['foo'], Array, Number)).to.throw('Expecting number, received string "foo"');
+        });
 
-    it('TypeChecker::validate Date', () => {
-        // Failed validation: number !== date
-        try {
-            validate(3, Date);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('Expecting date, received number 3');
+        it('should validate dates', () => {
+            // Failed validation: number !== date
+            expect(() => validate(3, Date)).to.throw('Expecting date, received number 3');
 
-        // Validation ok
-        validate(new Date(), Date);
+            // Validation ok
+            validate(new Date(), Date);
 
-        // Failed validation: invalid date
-        try {
-            validate(new Date('foo'), Date);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('Expecting date, received object null', 'Date validation should fail');
-    });
+            // Failed validation: invalid date
+            expect(() => validate(new Date('foo'), Date)).to.throw('Expecting date, received object null');
+        });
 
-    it('TypeChecker::validate Nested objects', () => {
-        // Failed validation: missing required field
-        const foo = new Foo();
-        try {
+        it('should validate nested objects', () => {
+            expect(() => validate(null, Y)).to.throw('Expecting an instance of Y, received null');
+
+            // Failed validation: missing required field
+            const foo = new Foo();
+            expect(() => validate(foo, Foo)).to.throw('name: Field is required');
+
+            // Failed validation: Invalid array items (number) while expecting string
+            foo.name = 'Name';
+            foo.hobbies = <any> [3, 4];
+            expect(() => validate(foo, Foo)).to.throw('hobbies[0]: Expecting string, received number 3');
+
+            // Failed validation: Non nullable property
+            foo.hobbies = null;
+            foo.bar = null;
+            expect(() => validate(foo, Foo)).to.throw('bar: Field can\'t be null');
+
+            // Failed validation: missing required field on nested object
+            const bar = new Bar();
+            bar.description = 'Description';
+            bar.description2 = <any> 3;
+            foo.bar = bar;
+            expect(() => validate(foo, Foo)).to.throw('bar.description3: Field is required'); // Description2 validation is ignored
+
+            // Validation ok: description3 array type is ignored
+            bar.description3 = <any> [3, 4];
             validate(foo, Foo);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('name: Field is required');
 
-        // Failed validation: Invalid array items (number) while expecting string
-        foo.name = 'Name';
-        foo.hobbies = <any> [3, 4];
-        try {
-            validate(foo, Foo);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('hobbies[0]: Expecting string, received number 3');
+            foo.bars = <any> [bar, {description: 4}];
+            expect(() => validate(foo, Foo)).to.throw('bars[1].description: Expecting string, received number 4');
+        });
 
-        // Failed validation: Non nullable property
-        foo.hobbies = null;
-        foo.bar = null;
-        try {
-            validate(foo, Foo);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('bar: Field can\'t be null', 'Null field error should be thrown');
+        it('should validate class inheritance', () => {
+            const a = new A();
+            expect(() => validate(a, A)).to.throw('property1: Field is required');
 
-        // Failed validation: missing required field on nested object
-        const bar = new Bar();
-        bar.description = 'Description';
-        bar.description2 = <any> 3;
-        foo.bar = bar;
-        try {
-            validate(foo, Foo);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('bar.description3: Field is required'); // Description2 validation is ignored
+            a.property1 = 'foo';
+            expect(() => validate(a, A)).to.throw('property2: Field is required');
 
-        // Validation ok: description3 array type is ignored
-        bar.description3 = <any> [3, 4];
-        validate(foo, Foo);
-
-        foo.bars = <any> [bar, {description: 4}];
-        try {
-            validate(foo, Foo);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('bars[1].description: Expecting string, received number 4');
-    });
-
-    it('TypeChecker::validate Class inheritance', () => {
-        const a = new A();
-        try {
+            a.property2 = 'bar';
             validate(a, A);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('property1: Field is required');
+        });
 
-        a.property1 = 'foo';
-        try {
-            validate(a, A);
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('property2: Field is required');
-
-        a.property2 = 'bar';
-        validate(a, A);
+        it('should return object instances after validation', () => {
+            expect(validate({}, Y)).to.be.instanceof(Y);
+            expect(validate([{}], Array, Y)[0]).to.be.instanceof(Y);
+        });
     });
 
-    it('TypeChecker::TypesCheck', () => {
-        // No validation called
-        Test.test(5);
+    describe('TypesCheck()', () => {
+        it('should perform automatic validation', () => {
+            // No validation called
+            Test.test(5);
 
-        // Validation called automatically thanks to decorators
-        try {
-            Test.test2(5, null, 'foo');
-        } catch (e) {
-            error = e.message;
-        }
-        expect(error).to.equal('name: Field is required');
+            // Validation called automatically thanks to decorators
+            expect (() => Test.test2(5, null, 'foo')).to.throw('name: Field is required');
+        });
     });
 });

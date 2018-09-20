@@ -100,7 +100,7 @@ To validate an object manually, you can call the `validate` method:
   */
 validate(input: any, expectedType: any, arrayType?: any): void
 ```
-This method throws a `ValidationError` if validation fails, and does nothing otherwise.
+This method throws a `ValidationError` if validation fails, and returns an instance of the validated object on success.
 
 For example, using the previously created `Article` class:
 ```ts
@@ -112,6 +112,17 @@ article.title = 'title';
 
 // In this case, the validate() method will throw a ValidationError because the Article 'tags' property is required
 validate(article, Article);
+
+// On success, the validate() method will automatically create a valid instance of Article, for example:
+const data: any = {
+    title: 'Title',
+    content: 'Content',
+    tags: [],
+    authors: []
+};
+
+const result = validate(data, Article);
+// 'result' is now a valid instance of Article object
 ```
 
 ##### Automatic validation on function call

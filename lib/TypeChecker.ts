@@ -24,7 +24,7 @@ export function TypesCheck(target: any, propertyKey: string, descriptor: TypedPr
         if (Array.isArray(target[paramsToCheck]) && target[paramsToCheck].hasOwnProperty(propertyKey)) {
             for (let i = 0; i < args.length; i += 1) {
                 if (typeof target[paramsToCheck][propertyKey][i] !== 'undefined') {
-                    validate(args[i], target[paramsToCheck][propertyKey][i]);
+                    args[i] = validate(args[i], target[paramsToCheck][propertyKey][i]);
                 }
             }
         }
@@ -101,24 +101,25 @@ function getParent(type: any): any {
     return null;
 }
 
-function validateInput(input: any, expectedType: any, arrayType: any = null): void {
+function validateInput(input: any, expectedType: any, arrayType: any = null): any {
     // Try to validate properties from parent class if existing
     const parent = getParent(expectedType);
     if (parent) {
-        validateInput(input, parent, arrayType);
+        input = validateInput(input, parent, arrayType);
     }
 
     // Try to instantiate the expected type to see if it's valid 
     try {
         expectedType = new expectedType();
     } catch (e) {
-        return;
+        return input;
     }
 
     // If type has propertiesToCheck, it's a complex type with fields to validate
     const constructorName = expectedType.constructor.name;
     if (expectedType[propertiesToCheck] && expectedType[propertiesToCheck][constructorName]) {
-        Object.keys(expectedType[propertiesToCheck][constructorName]).forEach(key => {
+        const keysToValidate = Object.keys(expectedType[propertiesToCheck][constructorName]);
+        for (const key of keysToValidate) {
             const checkParams: PropertyCheckParams = expectedType[propertiesToCheck][constructorName][key];
             // Validate required
             if (input && input.hasOwnProperty(key)) {
@@ -134,16 +135,25 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
             }
 
             // Validate properties recursively
-            if (input[key]) {
+            if (input && input[key]) {
                 try {
-                    validateInput(input[key], checkParams.type, checkParams.arrayType);
+                    expectedType[key] = validateInput(input[key], checkParams.type, checkParams.arrayType);
                 } catch (e) {
                     const propertyName = !isNaN(e.index) ? `${key}[${e.index}]` : key;
                     (<InternalError> e).fields.unshift(propertyName);
                     throw e;
                 }
             }
-        });
+        }
+
+        if (input && typeof input === 'object') {
+            for (const uncheckedKey of Object.keys(input).filter(i => keysToValidate.indexOf(i) < 0)) {
+                expectedType[uncheckedKey] = input[uncheckedKey];
+            }
+        } else {
+            throw new InternalError(`Expecting an instance of ${constructorName}, received ${JSON.stringify(input)}`);
+        }
+        return expectedType;
     } else { // Else it's a basic type or a complex type with no validation
         if (constructorName !== 'Object') {
             const providedType = typeof input;
@@ -151,16 +161,17 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
                 if (!Array.isArray(input)) {
                     throw new InternalError(`Expecting array, received ${providedType} ${JSON.stringify(input)}`);
                 }
-                if (arrayType) {
-                    input.forEach((item, index) => {
-                        try {
-                            validateInput(item, arrayType);
-                        } catch (e) {
-                            (<InternalError> e).index = index;
-                            throw e;
-                        }
-                    });
+
+                for (const [index, item] of input.entries()) {
+                    try {
+                        expectedType.push(arrayType ? validateInput(item, arrayType) : item);
+                    } catch (e) {
+                        (<InternalError> e).index = index;
+                        throw e;
+                    }
                 }
+
+                return expectedType;
             } else if (constructorName === 'Date') {
                 if (input instanceof Date !== true || typeof input.getTime !== 'function' || isNaN(input.getTime())) {
                     throw new InternalError(`Expecting date, received ${providedType} ${JSON.stringify(input)}`);
@@ -172,12 +183,15 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): vo
                 }
             }
         }
+        return input;
     }
 }
 
-export function validate(input: any, expectedType: any, arrayType: any = null): void {
+export function validate<T>(input: any, expectedType: (new () => T)): T;
+export function validate<T extends ArrayConstructor, U>(input: any, expectedType: T, arrayType: (new () => U)): U[];
+export function validate(input: any, expectedType: any, arrayType: any = null): any {
     try {
-        validateInput(input, expectedType, arrayType);
+        return validateInput(input, expectedType, arrayType);
     } catch (e) {
         const fields = (<InternalError> e).fields;
         if (fields.length > 0) {
