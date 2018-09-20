@@ -54,6 +54,10 @@ class B extends Parent {
 class Y {
     @PropertyCheck({required: false})
     public readonly name?: string;
+    @PropertyCheck({required: false})
+    public readonly test?: boolean;
+    @PropertyCheck({required: false})
+    public readonly test2?: number;
 }
 
 describe('TypeChecker', () => {
@@ -95,6 +99,7 @@ describe('TypeChecker', () => {
         });
 
         it('should validate nested objects', () => {
+            expect(validate({test: false, test2: 0}, Y)).to.deep.equal({test: false, test2: 0}, 'Result should be as expected');
             expect(() => validate(null, Y)).to.throw('Expecting an instance of Y, received null');
 
             // Failed validation: missing required field

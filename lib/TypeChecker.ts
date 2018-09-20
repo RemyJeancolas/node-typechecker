@@ -135,7 +135,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
             }
 
             // Validate properties recursively
-            if (input && input[key]) {
+            if (input && input[key] != null) {
                 try {
                     expectedType[key] = validateInput(input[key], checkParams.type, checkParams.arrayType);
                 } catch (e) {

@@ -123,7 +123,7 @@ function validateInput(input, expectedType, arrayType = null) {
                 throw error;
             }
             // Validate properties recursively
-            if (input && input[key]) {
+            if (input && input[key] != null) {
                 try {
                     expectedType[key] = validateInput(input[key], checkParams.type, checkParams.arrayType);
                 }
