@@ -61,7 +61,7 @@ export function PropertyCheck(params: PropertyCheckParams = {}): any {
             return;
         }
 
-        // Add type 
+        // Add type
         if (!Array.isArray(target[propertiesToCheck])) {
             target[propertiesToCheck] = [];
         }
@@ -108,7 +108,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
         input = validateInput(input, parent, arrayType);
     }
 
-    // Try to instantiate the expected type to see if it's valid 
+    // Try to instantiate the expected type to see if it's valid
     try {
         expectedType = new expectedType();
     } catch (e) {

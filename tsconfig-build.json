@@ -1,14 +1,7 @@
 {
+  "extends": "./tsconfig",
   "compilerOptions": {
-    "target": "ES6",
-    "module": "commonjs",
-    "outDir": "./js/",
-    "sourceMap": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "forceConsistentCasingInFileNames": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "removeComments": true
   },
   "exclude": [
     "node_modules",

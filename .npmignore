@@ -9,3 +9,5 @@ tslint.json
 .idea
 .vscode
 npm-debug.log
+.nycrc
+.nvmrc

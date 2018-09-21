@@ -1,0 +1,20 @@
+{
+    "include": [
+      "src/*.ts"
+    ],
+    "exclude": [
+      "index.d.ts"
+    ],
+    "extension": [
+      ".ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ],
+    "reporter": [
+      "html",
+      "text-summary",
+      "lcov"
+    ],
+    "all": true
+}

@@ -1,5 +1,5 @@
-import {expect} from 'chai';
-import {validate, PropertyCheck, TypesCheck, TypeCheck} from '../src/TypeChecker';
+import { expect } from 'chai';
+import { validate, PropertyCheck, TypesCheck, TypeCheck } from '../src/TypeChecker';
 
 class Bar {
     @PropertyCheck()
@@ -44,11 +44,6 @@ class Parent {
 class A extends Parent {
     @PropertyCheck()
     public property2: string;
-}
-
-class B extends Parent {
-    @PropertyCheck()
-    public property3: string;
 }
 
 class Y {
