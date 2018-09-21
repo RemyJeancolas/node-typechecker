@@ -1,6 +1,11 @@
 tests
 lib
 tsconfig.json
+tsconfig-build.json
 tslint.json
 .gitignore
 .travis.yml
+.nyc_output
+.idea
+.vscode
+npm-debug.log

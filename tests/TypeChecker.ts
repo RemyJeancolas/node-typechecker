@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {validate, PropertyCheck, TypesCheck, TypeCheck} from '../lib/TypeChecker';
+import {validate, PropertyCheck, TypesCheck, TypeCheck} from '../src/TypeChecker';
 
 class Bar {
     @PropertyCheck()
