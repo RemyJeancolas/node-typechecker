@@ -46,6 +46,11 @@ class A extends Parent {
     public property2: string;
 }
 
+class X {
+    @PropertyCheck({onFailure: <any> 'foo'})
+    public readonly invalidOnFailure?: string;
+}
+
 class Y {
     @PropertyCheck({required: false})
     public readonly name?: string;
@@ -53,6 +58,21 @@ class Y {
     public readonly test?: boolean;
     @PropertyCheck({required: false})
     public readonly test2?: number;
+}
+
+class Z {
+    @PropertyCheck({onFailure: 'ignore'})
+    public readonly requiredIgnore?: string;
+    @PropertyCheck({onFailure: 'setNull'})
+    public readonly requiredSetNull?: string;
+    @PropertyCheck({onFailure: 'ignore'})
+    public readonly notRequiredIgnore?: string;
+    @PropertyCheck({onFailure: 'setNull'})
+    public readonly notRequiredSetNull?: string;
+    @PropertyCheck({onFailure: 'ignore'})
+    public readonly invalidIgnore?: string;
+    @PropertyCheck({onFailure: 'setNull'})
+    public readonly invalidSetNull?: string;
 }
 
 describe('TypeChecker', () => {
@@ -140,6 +160,25 @@ describe('TypeChecker', () => {
         it('should return object instances after validation', () => {
             expect(validate({}, Y)).to.be.instanceof(Y);
             expect(validate([{}], Array, Y)[0]).to.be.instanceof(Y);
+        });
+
+        it('should ignore invalid "onFailure" values', () => {
+            expect(() => validate({}, X)).to.throw('invalidOnFailure: Field is required');
+        });
+
+        it('should ignore validation failures and return a valid object is "onFailure" is defined', () => {
+            const result = validate({
+                notRequiredIgnore: null,
+                notRequiredSetNull: null,
+                invalidIgnore: 2,
+                invalidSetNull: 2
+            }, Z);
+            expect(result).to.deep.equal({
+                requiredSetNull: null,
+                notRequiredSetNull: null,
+                invalidSetNull: null
+            }, 'Result should be as expected');
+            expect(result).to.be.instanceof(Z);
         });
     });
 

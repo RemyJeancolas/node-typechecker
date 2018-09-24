@@ -57,6 +57,9 @@ function PropertyCheck(params = {}) {
         params.type = type;
         params.required = (typeof params.required === 'boolean') ? params.required : true;
         params.nullable = (typeof params.nullable === 'boolean') ? params.nullable : false;
+        if (params.onFailure && ['ignore', 'setNull'].indexOf(params.onFailure) < 0) {
+            delete params.onFailure;
+        }
         if (expectedType.constructor.name === 'Array' && params.arrayType) {
             try {
                 expectedType = new params.arrayType();
@@ -99,24 +102,39 @@ function validateInput(input, expectedType, arrayType = null) {
             const checkParams = expectedType[propertiesToCheck][constructorName][key];
             if (input && input.hasOwnProperty(key)) {
                 if (!checkParams.nullable && input[key] == null) {
-                    const error = new InternalError('Field can\'t be null');
-                    error.fields.push(key);
-                    throw error;
+                    if (checkParams.onFailure === 'setNull') {
+                        expectedType[key] = null;
+                    }
+                    else if (checkParams.onFailure !== 'ignore') {
+                        const error = new InternalError('Field can\'t be null');
+                        error.fields.push(key);
+                        throw error;
+                    }
                 }
             }
             else if (checkParams.required) {
-                const error = new InternalError('Field is required');
-                error.fields.push(key);
-                throw error;
+                if (checkParams.onFailure === 'setNull') {
+                    expectedType[key] = null;
+                }
+                else if (checkParams.onFailure !== 'ignore') {
+                    const error = new InternalError('Field is required');
+                    error.fields.push(key);
+                    throw error;
+                }
             }
             if (input && input[key] != null) {
                 try {
                     expectedType[key] = validateInput(input[key], checkParams.type, checkParams.arrayType);
                 }
                 catch (e) {
-                    const propertyName = !isNaN(e.index) ? `${key}[${e.index}]` : key;
-                    e.fields.unshift(propertyName);
-                    throw e;
+                    if (checkParams.onFailure === 'setNull') {
+                        expectedType[key] = null;
+                    }
+                    else if (checkParams.onFailure !== 'ignore') {
+                        const propertyName = !isNaN(e.index) ? `${key}[${e.index}]` : key;
+                        e.fields.unshift(propertyName);
+                        throw e;
+                    }
                 }
             }
         }

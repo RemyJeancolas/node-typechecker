@@ -1,8 +1,11 @@
+type onFailure = 'ignore'|'setNull';
+
 export interface PropertyCheckParams {
     type?: any;
     arrayType?: any;
     required?: boolean;
     nullable?: boolean;
+    onFailure?: onFailure;
 }
 
 export class ValidationError extends Error {}

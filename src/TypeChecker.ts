@@ -3,11 +3,14 @@ import 'reflect-metadata';
 const propertiesToCheck = Symbol('propertiesToCheck');
 const paramsToCheck = Symbol('paramsToCheck');
 
+type onFailure = 'ignore'|'setNull';
+
 export interface PropertyCheckParams {
     type?: any; // tslint:disable-line:no-reserved-keywords
     arrayType?: any;
     required?: boolean;
     nullable?: boolean;
+    onFailure?: onFailure;
 }
 
 export class ValidationError extends Error {}
@@ -74,6 +77,9 @@ export function PropertyCheck(params: PropertyCheckParams = {}): any {
         params.type = type;
         params.required = (typeof params.required === 'boolean') ? params.required : true;
         params.nullable = (typeof params.nullable === 'boolean') ? params.nullable : false;
+        if (params.onFailure && ['ignore', 'setNull'].indexOf(params.onFailure) < 0) {
+            delete params.onFailure;
+        }
 
         // If type is array, check array type if provided
         if (expectedType.constructor.name === 'Array' && params.arrayType) {
@@ -121,17 +127,25 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
         const keysToValidate = Object.keys(expectedType[propertiesToCheck][constructorName]);
         for (const key of keysToValidate) {
             const checkParams: PropertyCheckParams = expectedType[propertiesToCheck][constructorName][key];
-            // Validate required
+            // Validate nullable
             if (input && input.hasOwnProperty(key)) {
                 if (!checkParams.nullable && input[key] == null) {
-                    const error = new InternalError('Field can\'t be null');
+                    if (checkParams.onFailure === 'setNull') {
+                        expectedType[key] = null;
+                    } else if (checkParams.onFailure !== 'ignore') {
+                        const error = new InternalError('Field can\'t be null');
+                        error.fields.push(key);
+                        throw error;
+                    }
+                }
+            } else if (checkParams.required) { // Validate required
+                if (checkParams.onFailure === 'setNull') {
+                    expectedType[key] = null;
+                } else if (checkParams.onFailure !== 'ignore') {
+                    const error = new InternalError('Field is required');
                     error.fields.push(key);
                     throw error;
                 }
-            } else if (checkParams.required) {
-                const error = new InternalError('Field is required');
-                error.fields.push(key);
-                throw error;
             }
 
             // Validate properties recursively
@@ -139,9 +153,13 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
                 try {
                     expectedType[key] = validateInput(input[key], checkParams.type, checkParams.arrayType);
                 } catch (e) {
-                    const propertyName = !isNaN(e.index) ? `${key}[${e.index}]` : key;
-                    (<InternalError> e).fields.unshift(propertyName);
-                    throw e;
+                    if (checkParams.onFailure === 'setNull') {
+                        expectedType[key] = null;
+                    } else if (checkParams.onFailure !== 'ignore') {
+                        const propertyName = !isNaN(e.index) ? `${key}[${e.index}]` : key;
+                        (<InternalError> e).fields.unshift(propertyName);
+                        throw e;
+                    }
                 }
             }
         }
