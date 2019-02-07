@@ -92,7 +92,10 @@ export function PropertyCheck(params: PropertyCheckParams = {}): any {
             delete params.arrayType;
         }
 
-        target[propertiesToCheck][target.constructor.name][key] = params;
+        target[propertiesToCheck][target.constructor.name].push({
+            key,
+            params
+        });
     };
 }
 
@@ -124,9 +127,11 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
     // If type has propertiesToCheck, it's a complex type with fields to validate
     const constructorName = expectedType.constructor.name;
     if (expectedType[propertiesToCheck] && expectedType[propertiesToCheck][constructorName]) {
-        const keysToValidate = Object.keys(expectedType[propertiesToCheck][constructorName]);
-        for (const key of keysToValidate) {
-            const checkParams: PropertyCheckParams = expectedType[propertiesToCheck][constructorName][key];
+        const keysToValidate: string[] = [];
+        for (const target of expectedType[propertiesToCheck][constructorName]) {
+            const key = target.key;
+            const checkParams: PropertyCheckParams = target.params;
+            keysToValidate.push(key);
             // Validate nullable
             if (input && input.hasOwnProperty(key)) {
                 if (!checkParams.nullable && input[key] == null) {
