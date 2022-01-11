@@ -31,7 +31,7 @@ class Test {
         return input;
     }
     @TypesCheck
-    public static test2(input: number, @TypeCheck(Foo) foo: Foo, @TypeCheck(String) whatever: string): number {
+    public static test2(input: number, @TypeCheck(Foo) _foo: Foo, @TypeCheck(String) _whatever: string): number {
         return input;
     }
 }
