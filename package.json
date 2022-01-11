@@ -4,7 +4,6 @@
   "description": "Utility that allows to check that an object validates a predefined contract",
   "main": "js/TypeChecker.js",
   "scripts": {
-    "dev": "nodemon --watch . -e ts --exec 'ts-node index.ts'",
     "test": "mocha tests/TypeChecker.ts --require ts-node/register --bail",
     "cover": "nyc --report-dir tests/coverage npm run test",
     "lint": "tslint -t verbose --project tsconfig.json -c tslint.json ./src/TypeChecker.ts ./tests/TypeChecker.ts",
@@ -39,22 +38,21 @@
   },
   "homepage": "https://github.com/RemyJeancolas/node-typechecker#readme",
   "dependencies": {
-    "reflect-metadata": "^0.1.12"
+    "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {
-    "@types/chai": "^4.1.5",
+    "@types/chai": "^4.3.0",
     "@types/mocha": "^2.2.48",
     "@types/sinon": "^4.3.3",
-    "chai": "^4.1.2",
-    "coveralls": "^3.0.2",
+    "chai": "^4.3.4",
+    "coveralls": "^3.1.1",
     "mocha": "^5.2.0",
-    "nodemon": "^1.18.4",
     "nyc": "^14.1.1",
     "sinon": "^4.5.0",
     "ts-node": "^3.3.0",
-    "tslint": "^5.11.0",
+    "tslint": "^5.20.1",
     "tslint-microsoft-contrib": "^5.2.1",
-    "typescript": "^3.0.3"
+    "typescript": "^3.9.10"
   },
   "typings": "index.d.ts"
 }

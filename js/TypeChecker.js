@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.validate = exports.PropertyCheck = exports.TypeCheck = exports.TypesCheck = exports.ValidationError = void 0;
 require("reflect-metadata");
 const propertiesToCheck = Symbol('propertiesToCheck');
 const paramsToCheck = Symbol('paramsToCheck');
