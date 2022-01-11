@@ -8,6 +8,8 @@ class Bar {
     public description2: string;
     @PropertyCheck({arrayType: {}}) // Invalid array type, items type validation will be disabled
     public description3: string[];
+    @PropertyCheck()
+    public length: number;
 }
 
 class Foo {
@@ -135,6 +137,7 @@ describe('TypeChecker', () => {
             const bar = new Bar();
             bar.description = 'Description';
             bar.description2 = <any> 3;
+            bar['length'] = 123;
             foo.bar = bar;
             expect(() => validate(foo, Foo)).to.throw('bar.description3: Field is required'); // Description2 validation is ignored
 
