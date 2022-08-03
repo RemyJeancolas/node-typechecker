@@ -50,7 +50,7 @@ export function TypesCheck(target: any, propertyKey: string, descriptor: TypedPr
     const originalMethod = descriptor.value;
 
     descriptor.value = function(...args: any[]): any {
-        if (Array.isArray(target[paramsToCheck]) && target[paramsToCheck].hasOwnProperty(propertyKey)) {
+        if (target[paramsToCheck] && target[paramsToCheck].hasOwnProperty(propertyKey)) {
             for (let i = 0; i < args.length; i += 1) {
                 if (typeof target[paramsToCheck][propertyKey][i] !== 'undefined') {
                     args[i] = validate(args[i], target[paramsToCheck][propertyKey][i]);
@@ -65,8 +65,8 @@ export function TypesCheck(target: any, propertyKey: string, descriptor: TypedPr
 // tslint:disable-next-line:no-reserved-keywords
 export function TypeCheck(type: any): any {
     return (target: any, propertyKey: string | symbol, parameterIndex: number): any => {
-        if (!Array.isArray(target[paramsToCheck])) {
-            target[paramsToCheck] = [];
+        if (!target[paramsToCheck]) {
+            target[paramsToCheck] = {};
         }
         if (!target[paramsToCheck].hasOwnProperty(propertyKey)) {
             target[paramsToCheck][propertyKey] = [];
@@ -91,13 +91,13 @@ export function PropertyCheck(params: PropertyCheckParams = {}): any {
         }
 
         // Add type
-        if (!Array.isArray(target[propertiesToCheck])) {
-            target[propertiesToCheck] = [];
+        if (!target[propertiesToCheck]) {
+            target[propertiesToCheck] = {};
         }
 
         // Create an array specific to current class to store properties to check, ignoring parent class decorators
-        if (!Array.isArray(target[propertiesToCheck][target.constructor.name])) {
-            target[propertiesToCheck][target.constructor.name] = [];
+        if (!target[propertiesToCheck][target.constructor.name]) {
+            target[propertiesToCheck][target.constructor.name] = {};
         }
 
         params.type = type;

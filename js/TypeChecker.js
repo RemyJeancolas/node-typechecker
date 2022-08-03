@@ -33,7 +33,7 @@ class InternalError extends Error {
 function TypesCheck(target, propertyKey, descriptor) {
     const originalMethod = descriptor.value;
     descriptor.value = function (...args) {
-        if (Array.isArray(target[paramsToCheck]) && target[paramsToCheck].hasOwnProperty(propertyKey)) {
+        if (target[paramsToCheck] && target[paramsToCheck].hasOwnProperty(propertyKey)) {
             for (let i = 0; i < args.length; i += 1) {
                 if (typeof target[paramsToCheck][propertyKey][i] !== 'undefined') {
                     args[i] = validate(args[i], target[paramsToCheck][propertyKey][i]);
@@ -46,8 +46,8 @@ function TypesCheck(target, propertyKey, descriptor) {
 exports.TypesCheck = TypesCheck;
 function TypeCheck(type) {
     return (target, propertyKey, parameterIndex) => {
-        if (!Array.isArray(target[paramsToCheck])) {
-            target[paramsToCheck] = [];
+        if (!target[paramsToCheck]) {
+            target[paramsToCheck] = {};
         }
         if (!target[paramsToCheck].hasOwnProperty(propertyKey)) {
             target[paramsToCheck][propertyKey] = [];
@@ -66,11 +66,11 @@ function PropertyCheck(params = {}) {
         catch (e) {
             return;
         }
-        if (!Array.isArray(target[propertiesToCheck])) {
-            target[propertiesToCheck] = [];
+        if (!target[propertiesToCheck]) {
+            target[propertiesToCheck] = {};
         }
-        if (!Array.isArray(target[propertiesToCheck][target.constructor.name])) {
-            target[propertiesToCheck][target.constructor.name] = [];
+        if (!target[propertiesToCheck][target.constructor.name]) {
+            target[propertiesToCheck][target.constructor.name] = {};
         }
         params.type = type;
         params.required = (typeof params.required === 'boolean') ? params.required : true;
