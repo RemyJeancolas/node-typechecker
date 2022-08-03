@@ -13,11 +13,37 @@ export interface PropertyCheckParams {
     onFailure?: onFailure;
 }
 
-export class ValidationError extends Error {}
+export class ValidationError extends Error {
+    public readonly field: string | undefined;
+    public readonly errorType: ValidationErrorType;
+
+    constructor(message: string, errorType: ValidationErrorType, fields?: string[]) {
+        if (Array.isArray(fields) && fields.length > 0) {
+            super(`${fields.join('.')}: ${message}`);
+            this.field = fields[fields.length - 1];
+        } else {
+            super(message);
+        }
+
+        this.errorType = errorType;
+    }
+}
+
+export enum ValidationErrorType {
+    NullValue = 'null',
+    MissingField = 'missing',
+    InvalidType = 'invalid'
+}
 
 class InternalError extends Error {
     public fields: string[] = [];
+    public errorType: ValidationErrorType;
     public index?: number;
+
+    constructor(message: string, errorType: ValidationErrorType) {
+        super(message);
+        this.errorType = errorType;
+    }
 }
 
 export function TypesCheck(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>): any {
@@ -107,6 +133,12 @@ function getParent(type: any): any {
     return null;
 }
 
+function throwInternalErrorInvalidType(expectedType: string, providedType: string): never {
+    throw new InternalError(
+        `Expecting ${expectedType}, received ${providedType}`, ValidationErrorType.InvalidType
+    );
+}
+
 function validateInput(input: any, expectedType: any, arrayType: any = null): any {
     // Try to validate properties from parent class if existing
     const parent = getParent(expectedType);
@@ -133,7 +165,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
                     if (checkParams.onFailure === 'setNull') {
                         expectedType[key] = null;
                     } else if (checkParams.onFailure !== 'ignore') {
-                        const error = new InternalError('Field can\'t be null');
+                        const error = new InternalError('Field can\'t be null', ValidationErrorType.NullValue);
                         error.fields.push(key);
                         throw error;
                     }
@@ -142,7 +174,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
                 if (checkParams.onFailure === 'setNull') {
                     expectedType[key] = null;
                 } else if (checkParams.onFailure !== 'ignore') {
-                    const error = new InternalError('Field is required');
+                    const error = new InternalError('Field is required', ValidationErrorType.MissingField);
                     error.fields.push(key);
                     throw error;
                 }
@@ -169,7 +201,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
                 expectedType[uncheckedKey] = input[uncheckedKey];
             }
         } else {
-            throw new InternalError(`Expecting an instance of ${constructorName}, received ${JSON.stringify(input)}`);
+            throwInternalErrorInvalidType(`an instance of ${constructorName}`, JSON.stringify(input));
         }
         return expectedType;
     } else { // Else it's a basic type or a complex type with no validation
@@ -177,7 +209,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
             const providedType = typeof input;
             if (constructorName === 'Array') {
                 if (!Array.isArray(input)) {
-                    throw new InternalError(`Expecting array, received ${providedType} ${JSON.stringify(input)}`);
+                    throwInternalErrorInvalidType('array', `${providedType} ${JSON.stringify(input)}`);
                 }
 
                 for (const [index, item] of input.entries()) {
@@ -192,12 +224,12 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
                 return expectedType;
             } else if (constructorName === 'Date') {
                 if (input instanceof Date !== true || typeof input.getTime !== 'function' || isNaN(input.getTime())) {
-                    throw new InternalError(`Expecting date, received ${providedType} ${JSON.stringify(input)}`);
+                    throwInternalErrorInvalidType('date', `${providedType} ${JSON.stringify(input)}`);
                 }
             } else {
                 expectedType = typeof expectedType.valueOf();
                 if (providedType !== expectedType) {
-                    throw new InternalError(`Expecting ${expectedType}, received ${providedType} ${JSON.stringify(input)}`);
+                    throwInternalErrorInvalidType(expectedType, `${providedType} ${JSON.stringify(input)}`);
                 }
             }
         }
@@ -210,11 +242,8 @@ export function validate<T extends ArrayConstructor, U>(input: any, expectedType
 export function validate(input: any, expectedType: any, arrayType: any = null): any {
     try {
         return validateInput(input, expectedType, arrayType);
-    } catch (e) {
-        const fields = (<InternalError> e).fields;
-        if (fields.length > 0) {
-            throw new ValidationError(`${fields.join('.')}: ${e.message}`);
-        }
-        throw new ValidationError(e.message);
+    } catch (err) {
+        const e = <InternalError> err;
+        throw new ValidationError(e.message, e.errorType, e.fields);
     }
 }
