@@ -8,7 +8,16 @@ export interface PropertyCheckParams {
     onFailure?: onFailure;
 }
 
-export class ValidationError extends Error {}
+export declare enum ValidationErrorType {
+    NullValue = "null",
+    MissingField = "missing",
+    InvalidType = "invalid"
+}
+
+export class ValidationError extends Error {
+    public readonly field: string | undefined;
+    public readonly errorType: ValidationErrorType | undefined;
+}
 
 export function TypesCheck(target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>): any;
 export function TypeCheck(type: any): any;

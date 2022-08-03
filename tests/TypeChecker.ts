@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { validate, PropertyCheck, TypesCheck, TypeCheck } from '../src/TypeChecker';
+import { ValidationError, ValidationErrorType } from '..';
 
 class Bar {
     @PropertyCheck()
@@ -179,6 +180,27 @@ describe('TypeChecker', () => {
                 invalidSetNull: null
             }, 'Result should be as expected');
             expect(result).to.be.instanceof(Z);
+        });
+
+        it('should return the validation error type in the thrown error for basic types', () => {
+            let error: ValidationError | undefined;
+            try {
+                validate(new Date('foo'), Date);
+            } catch (err) {
+                error = err;
+            }
+            expect(error.errorType).to.equal(ValidationErrorType.InvalidType);
+        });
+
+        it('should return the validation error type and field name in the thrown error for complex objects', () => {
+            let error: ValidationError | undefined;
+            try {
+                validate(new Foo(), Foo);
+            } catch (err) {
+                error = err;
+            }
+            expect(error.errorType).to.equal(ValidationErrorType.MissingField);
+            expect(error.field).to.equal('name');
         });
     });
 
