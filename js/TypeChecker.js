@@ -33,7 +33,8 @@ class InternalError extends Error {
 function TypesCheck(target, propertyKey, descriptor) {
     const originalMethod = descriptor.value;
     descriptor.value = function (...args) {
-        if (target[paramsToCheck] && target[paramsToCheck].hasOwnProperty(propertyKey)) {
+        if (target[paramsToCheck] &&
+            Object.prototype.hasOwnProperty.call(target[paramsToCheck], propertyKey)) {
             for (let i = 0; i < args.length; i += 1) {
                 if (typeof target[paramsToCheck][propertyKey][i] !== 'undefined') {
                     args[i] = validate(args[i], target[paramsToCheck][propertyKey][i]);
@@ -49,7 +50,7 @@ function TypeCheck(type) {
         if (!target[paramsToCheck]) {
             target[paramsToCheck] = {};
         }
-        if (!target[paramsToCheck].hasOwnProperty(propertyKey)) {
+        if (!Object.prototype.hasOwnProperty.call(target[paramsToCheck], propertyKey)) {
             target[paramsToCheck][propertyKey] = [];
         }
         target[paramsToCheck][propertyKey][parameterIndex] = type;
@@ -73,8 +74,8 @@ function PropertyCheck(params = {}) {
             target[propertiesToCheck][target.constructor.name] = {};
         }
         params.type = type;
-        params.required = (typeof params.required === 'boolean') ? params.required : true;
-        params.nullable = (typeof params.nullable === 'boolean') ? params.nullable : false;
+        params.required = typeof params.required === 'boolean' ? params.required : true;
+        params.nullable = typeof params.nullable === 'boolean' ? params.nullable : false;
         if (params.onFailure && ['ignore', 'setNull'].indexOf(params.onFailure) < 0) {
             delete params.onFailure;
         }
@@ -96,7 +97,9 @@ exports.PropertyCheck = PropertyCheck;
 function getParent(type) {
     if (type && type.prototype) {
         const parentPrototype = Object.getPrototypeOf(type.prototype);
-        if (parentPrototype && parentPrototype.constructor && parentPrototype.constructor.name !== 'Object') {
+        if (parentPrototype &&
+            parentPrototype.constructor &&
+            parentPrototype.constructor.name !== 'Object') {
             return parentPrototype.constructor;
         }
     }
@@ -121,13 +124,13 @@ function validateInput(input, expectedType, arrayType = null) {
         const keysToValidate = Object.keys(expectedType[propertiesToCheck][constructorName]);
         for (const key of keysToValidate) {
             const checkParams = expectedType[propertiesToCheck][constructorName][key];
-            if (input && input.hasOwnProperty(key)) {
+            if (input && Object.prototype.hasOwnProperty.call(input, key)) {
                 if (!checkParams.nullable && input[key] == null) {
                     if (checkParams.onFailure === 'setNull') {
                         expectedType[key] = null;
                     }
                     else if (checkParams.onFailure !== 'ignore') {
-                        const error = new InternalError('Field can\'t be null', ValidationErrorType.NullValue);
+                        const error = new InternalError("Field can't be null", ValidationErrorType.NullValue);
                         error.fields.push(key);
                         throw error;
                     }
@@ -152,7 +155,9 @@ function validateInput(input, expectedType, arrayType = null) {
                         expectedType[key] = null;
                     }
                     else if (checkParams.onFailure !== 'ignore') {
-                        const propertyName = !isNaN(e.index) ? `${key}[${e.index}]` : key;
+                        const propertyName = !isNaN(e.index)
+                            ? `${key}[${e.index}]`
+                            : key;
                         e.fields.unshift(propertyName);
                         throw e;
                     }
@@ -160,7 +165,7 @@ function validateInput(input, expectedType, arrayType = null) {
             }
         }
         if (input && typeof input === 'object') {
-            for (const uncheckedKey of Object.keys(input).filter(i => keysToValidate.indexOf(i) < 0)) {
+            for (const uncheckedKey of Object.keys(input).filter((i) => keysToValidate.indexOf(i) < 0)) {
                 expectedType[uncheckedKey] = input[uncheckedKey];
             }
         }
@@ -188,7 +193,9 @@ function validateInput(input, expectedType, arrayType = null) {
                 return expectedType;
             }
             else if (constructorName === 'Date') {
-                if (input instanceof Date !== true || typeof input.getTime !== 'function' || isNaN(input.getTime())) {
+                if (input instanceof Date !== true ||
+                    typeof input.getTime !== 'function' ||
+                    isNaN(input.getTime())) {
                     throwInternalErrorInvalidType('date', `${providedType} ${JSON.stringify(input)}`);
                 }
             }
