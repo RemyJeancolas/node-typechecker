@@ -188,7 +188,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
                     if (checkParams.onFailure === 'setNull') {
                         expectedType[key] = null;
                     } else if (checkParams.onFailure !== 'ignore') {
-                        const propertyName = !isNaN(e.index) ? `${key}[${e.index}]` : key;
+                        const propertyName = !isNaN((e as InternalError).index!) ? `${key}[${(e as InternalError).index}]` : key;
                         (<InternalError> e).fields.unshift(propertyName);
                         throw e;
                     }

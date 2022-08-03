@@ -4,24 +4,24 @@ import { ValidationError, ValidationErrorType } from '..';
 
 class Bar {
     @PropertyCheck()
-    public description: string;
+    public description!: string;
     @PropertyCheck({type: {}}) // Invalid type, validation will be skipped for this property
-    public description2: string;
+    public description2!: string;
     @PropertyCheck({arrayType: {}}) // Invalid array type, items type validation will be disabled
-    public description3: string[];
+    public description3!: string[];
 }
 
 class Foo {
     @PropertyCheck()
-    public name: string;
+    public name!: string;
     @PropertyCheck({required: false})
-    public age: Number;
+    public age!: Number;
     @PropertyCheck({type: Array, arrayType: String, nullable: true})
-    public hobbies: string[];
+    public hobbies!: string[];
     @PropertyCheck()
-    public bar: Bar;
+    public bar!: Bar;
     @PropertyCheck({required: false, arrayType: Bar})
-    public bars: Bar[];
+    public bars!: Bar[];
     @PropertyCheck({required: false})
     public date?: Date;
 }
@@ -39,12 +39,12 @@ class Test {
 
 class Parent {
     @PropertyCheck()
-    public property1: string;
+    public property1!: string;
 }
 
 class A extends Parent {
     @PropertyCheck()
-    public property2: string;
+    public property2!: string;
 }
 
 class X {
@@ -128,8 +128,8 @@ describe('TypeChecker', () => {
             expect(() => validate(foo, Foo)).to.throw('hobbies[0]: Expecting string, received number 3');
 
             // Failed validation: Non nullable property
-            foo.hobbies = null;
-            foo.bar = null;
+            foo.hobbies = null as unknown as string[];
+            foo.bar = null as unknown as Bar;
             expect(() => validate(foo, Foo)).to.throw('bar: Field can\'t be null');
 
             // Failed validation: missing required field on nested object
@@ -187,9 +187,9 @@ describe('TypeChecker', () => {
             try {
                 validate(new Date('foo'), Date);
             } catch (err) {
-                error = err;
+                error = err as ValidationError;
             }
-            expect(error.errorType).to.equal(ValidationErrorType.InvalidType);
+            expect(error?.errorType).to.equal(ValidationErrorType.InvalidType);
         });
 
         it('should return the validation error type and field name in the thrown error for complex objects', () => {
@@ -197,10 +197,10 @@ describe('TypeChecker', () => {
             try {
                 validate(new Foo(), Foo);
             } catch (err) {
-                error = err;
+                error = err as ValidationError;
             }
-            expect(error.errorType).to.equal(ValidationErrorType.MissingField);
-            expect(error.field).to.equal('name');
+            expect(error?.errorType).to.equal(ValidationErrorType.MissingField);
+            expect(error?.field).to.equal('name');
         });
     });
 
@@ -210,7 +210,7 @@ describe('TypeChecker', () => {
             Test.test(5);
 
             // Validation called automatically thanks to decorators
-            expect (() => Test.test2(5, null, 'foo')).to.throw('name: Field is required');
+            expect (() => Test.test2(5, null as unknown as Foo, 'foo')).to.throw('name: Field is required');
         });
     });
 });

@@ -188,7 +188,7 @@
       "no-namespace": false,
       "no-reference": true,
       "no-unexternalized-strings": false,
-      "prefer-type-cast": true,
+      "prefer-type-cast": false,
       "no-angle-bracket-type-assertion": false,
       "missing-optional-annotation": false,
       "no-duplicate-parameter-names": true,
