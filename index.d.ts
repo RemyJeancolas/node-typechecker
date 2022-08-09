@@ -6,6 +6,7 @@ export interface PropertyCheckParams {
   required?: boolean;
   nullable?: boolean;
   onFailure?: onFailure;
+  customValidator?: (input: any) => boolean;
 }
 
 export declare enum ValidationErrorType {

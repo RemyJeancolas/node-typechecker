@@ -48,6 +48,7 @@ The `PropertyCheck` decorator takes an optional parameter in its constructor, wi
     nullable?: boolean; // Tell the validator if the property can be null or undefined (default false)
     arrayType?: any; // If your property is an array, define the item's type. If you don't want to check the item's type, just omit this parameter (default undefined)
     onFailure?: 'ignore'|'setNull' // Tell the validator to ignore the validation failures for the given property. The value will either be set to "null" or ignored in the resulting parsed object, according to the "onFailure" parameter (default: always throws errors)
+    customValidator?: (input: any) => boolean; // If present, will perform a custom validation on the property. The custom validation is only executed if the "basic" validations (required, nullable) are successful.
 }
 ```
 

@@ -11,7 +11,11 @@ export interface PropertyCheckParams {
   required?: boolean;
   nullable?: boolean;
   onFailure?: onFailure;
+  customValidator?: (input: any) => boolean;
 }
+
+type InternalParams = Required<Pick<PropertyCheckParams, 'type' | 'required' | 'nullable'>> &
+  Pick<PropertyCheckParams, 'arrayType' | 'onFailure' | 'customValidator'>;
 
 export class ValidationError extends Error {
   public readonly field: string | undefined;
@@ -33,7 +37,10 @@ export enum ValidationErrorType {
   NullValue = 'null',
   MissingField = 'missing',
   InvalidType = 'invalid',
+  Custom = 'custom',
 }
+
+type ExtraParams = Pick<PropertyCheckParams, 'customValidator'>;
 
 class InternalError extends Error {
   public fields: string[] = [];
@@ -83,7 +90,7 @@ export function TypeCheck(type: any): any {
 }
 
 export function PropertyCheck(params: PropertyCheckParams = {}): any {
-  return (target: any, key: string | symbol): any => {
+  return (target: any, key: string | symbol): void => {
     // Define property type
     const type = params.type ? params.type : Reflect.getMetadata('design:type', target, key);
 
@@ -106,25 +113,28 @@ export function PropertyCheck(params: PropertyCheckParams = {}): any {
       target[propertiesToCheck][target.constructor.name] = {};
     }
 
-    params.type = type;
-    params.required = typeof params.required === 'boolean' ? params.required : true;
-    params.nullable = typeof params.nullable === 'boolean' ? params.nullable : false;
-    if (params.onFailure && ['ignore', 'setNull'].indexOf(params.onFailure) < 0) {
-      delete params.onFailure;
-    }
+    const internalParams: InternalParams = {
+      type,
+      required: typeof params.required === 'boolean' ? params.required : true,
+      nullable: typeof params.nullable === 'boolean' ? params.nullable : false,
+    };
 
-    // If type is array, check array type if provided
+    if (typeof params.customValidator === 'function') {
+      internalParams.customValidator = params.customValidator;
+    }
+    if (params.onFailure && ['ignore', 'setNull'].includes(params.onFailure)) {
+      internalParams.onFailure = params.onFailure;
+    }
     if (expectedType.constructor.name === 'Array' && params.arrayType) {
       try {
-        expectedType = new params.arrayType();
+        new params.arrayType();
+        internalParams.arrayType = params.arrayType;
       } catch (e) {
-        delete params.arrayType;
+        // Ignore invalid array type
       }
-    } else {
-      delete params.arrayType;
     }
 
-    target[propertiesToCheck][target.constructor.name][key] = params;
+    target[propertiesToCheck][target.constructor.name][key] = internalParams;
   };
 }
 
@@ -149,11 +159,38 @@ function throwInternalErrorInvalidType(expectedType: string, providedType: strin
   );
 }
 
-function validateInput(input: any, expectedType: any, arrayType: any = null): any {
+function getExtraParams(params: InternalParams): ExtraParams {
+  return {
+    customValidator: params.customValidator,
+  };
+}
+
+function performExtraValidation<T>(input: T, params: ExtraParams): T {
+  if (params.customValidator) {
+    try {
+      const valid = params.customValidator(input);
+      if (valid !== true) {
+        throw new InternalError('Invalid value received', ValidationErrorType.Custom);
+      }
+    } catch (err) {
+      if (err instanceof InternalError) {
+        throw err;
+      }
+
+      const message = 'An error occurred while performing custom validation';
+      console.warn(message, err);
+      throw new InternalError(message, ValidationErrorType.Custom);
+    }
+  }
+
+  return input;
+}
+
+function validateInput(input: any, expectedType: any, arrayType: any, extra: ExtraParams): any {
   // Try to validate properties from parent class if existing
   const parent = getParent(expectedType);
   if (parent) {
-    input = validateInput(input, parent, arrayType);
+    input = validateInput(input, parent, arrayType, extra);
   }
 
   // Try to instantiate the expected type to see if it's valid
@@ -168,8 +205,7 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
   if (expectedType[propertiesToCheck] && expectedType[propertiesToCheck][constructorName]) {
     const keysToValidate = Object.keys(expectedType[propertiesToCheck][constructorName]);
     for (const key of keysToValidate) {
-      const checkParams: PropertyCheckParams =
-        expectedType[propertiesToCheck][constructorName][key];
+      const checkParams: InternalParams = expectedType[propertiesToCheck][constructorName][key];
       // Validate nullable
       if (input && Object.prototype.hasOwnProperty.call(input, key)) {
         if (!checkParams.nullable && input[key] == null) {
@@ -195,7 +231,12 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
       // Validate properties recursively
       if (input && input[key] != null) {
         try {
-          expectedType[key] = validateInput(input[key], checkParams.type, checkParams.arrayType);
+          expectedType[key] = validateInput(
+            input[key],
+            checkParams.type,
+            checkParams.arrayType,
+            getExtraParams(checkParams)
+          );
         } catch (e) {
           if (checkParams.onFailure === 'setNull') {
             expectedType[key] = null;
@@ -230,14 +271,14 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
 
         for (const [index, item] of input.entries()) {
           try {
-            expectedType.push(arrayType ? validateInput(item, arrayType) : item);
+            expectedType.push(arrayType ? validateInput(item, arrayType, undefined, {}) : item);
           } catch (e) {
             (e as InternalError).index = index;
             throw e;
           }
         }
 
-        return expectedType;
+        return performExtraValidation(expectedType, extra);
       } else if (constructorName === 'Date') {
         if (
           input instanceof Date !== true ||
@@ -253,7 +294,8 @@ function validateInput(input: any, expectedType: any, arrayType: any = null): an
         }
       }
     }
-    return input;
+
+    return performExtraValidation(input, extra);
   }
 }
 
@@ -265,7 +307,7 @@ export function validate<T extends ArrayConstructor, U>(
 ): U[];
 export function validate(input: any, expectedType: any, arrayType: any = null): any {
   try {
-    return validateInput(input, expectedType, arrayType);
+    return validateInput(input, expectedType, arrayType, {});
   } catch (err) {
     const e = err as InternalError;
     throw new ValidationError(e.message, e.errorType, e.fields);

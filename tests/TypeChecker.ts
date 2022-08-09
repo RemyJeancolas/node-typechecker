@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { stub } from 'sinon';
 import { validate, PropertyCheck, TypesCheck, TypeCheck } from '../src/TypeChecker';
 import { ValidationError, ValidationErrorType } from '..';
 
@@ -51,6 +52,21 @@ class Parent {
 class A extends Parent {
   @PropertyCheck()
   public property2!: string;
+}
+
+class B {
+  @PropertyCheck({ customValidator: (input) => input.trim().length > 2 })
+  public property1!: string;
+
+  @PropertyCheck({
+    required: false,
+    onFailure: 'setNull',
+    customValidator: (input) => input.trim().length > 2,
+  })
+  public property2?: string;
+
+  @PropertyCheck({ required: false, customValidator: (input) => input.length.trim() > 2 })
+  public property3?: string;
 }
 
 class X {
@@ -222,6 +238,35 @@ describe('TypeChecker', () => {
       }
       expect(error?.errorType).to.equal(ValidationErrorType.MissingField);
       expect(error?.field).to.equal('name');
+    });
+
+    it('should perform custom validation if defined', () => {
+      const b = new B();
+      expect(() => validate(b, B)).to.throw('property1: Field is required');
+
+      b.property1 = '  b  ';
+      expect(() => validate(b, B)).to.throw('property1: Invalid value received');
+
+      b.property1 = 'bbb';
+      expect(() => validate(b, B)).not.to.throw();
+
+      b.property2 = '  b  ';
+      const validated = validate(b, B);
+      expect(validated.property2).to.equal(null);
+    });
+
+    it('should throw a specific error and log a message if a technical error occurs during custom validation', () => {
+      const warn = stub(console, 'warn');
+      const b = new B();
+      b.property1 = 'bbb';
+      b.property3 = '';
+
+      expect(() => validate(b, B)).to.throw(
+        'property3: An error occurred while performing custom validation'
+      );
+      expect(warn.calledOnceWith('An error occurred while performing custom validation')).to.equal(
+        true
+      );
     });
   });
 
