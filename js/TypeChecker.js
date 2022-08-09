@@ -1,4 +1,15 @@
 "use strict";
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validate = exports.PropertyCheck = exports.TypeCheck = exports.TypesCheck = exports.ValidationErrorType = exports.ValidationError = void 0;
 require("reflect-metadata");
@@ -113,6 +124,8 @@ function throwInternalErrorInvalidType(expectedType, providedType) {
 }
 function getExtraParams(params) {
     return {
+        expectedType: params.type,
+        arrayType: params.arrayType,
         customValidator: params.customValidator,
     };
 }
@@ -135,110 +148,118 @@ function performExtraValidation(input, params) {
     }
     return input;
 }
-function validateInput(input, expectedType, arrayType, extra) {
-    const parent = getParent(expectedType);
-    if (parent) {
-        input = validateInput(input, parent, arrayType, extra);
-    }
-    try {
-        expectedType = new expectedType();
-    }
-    catch (e) {
-        return input;
-    }
-    const constructorName = expectedType.constructor.name;
-    if (expectedType[propertiesToCheck] && expectedType[propertiesToCheck][constructorName]) {
-        const keysToValidate = Object.keys(expectedType[propertiesToCheck][constructorName]);
-        for (const key of keysToValidate) {
-            const checkParams = expectedType[propertiesToCheck][constructorName][key];
-            if (input && Object.prototype.hasOwnProperty.call(input, key)) {
-                if (!checkParams.nullable && input[key] == null) {
-                    if (checkParams.onFailure === 'setNull') {
-                        expectedType[key] = null;
-                    }
-                    else if (checkParams.onFailure !== 'ignore') {
-                        const error = new InternalError("Field can't be null", ValidationErrorType.NullValue);
-                        error.fields.push(key);
-                        throw error;
-                    }
-                }
-            }
-            else if (checkParams.required) {
+function validateComplexObject(constructorName, input, typeInstance) {
+    const keysToValidate = Object.keys(typeInstance[propertiesToCheck][constructorName]);
+    for (const key of keysToValidate) {
+        const checkParams = typeInstance[propertiesToCheck][constructorName][key];
+        if (input && Object.prototype.hasOwnProperty.call(input, key)) {
+            if (!checkParams.nullable && input[key] == null) {
                 if (checkParams.onFailure === 'setNull') {
-                    expectedType[key] = null;
+                    typeInstance[key] = null;
                 }
                 else if (checkParams.onFailure !== 'ignore') {
-                    const error = new InternalError('Field is required', ValidationErrorType.MissingField);
+                    const error = new InternalError("Field can't be null", ValidationErrorType.NullValue);
                     error.fields.push(key);
                     throw error;
                 }
             }
-            if (input && input[key] != null) {
-                try {
-                    expectedType[key] = validateInput(input[key], checkParams.type, checkParams.arrayType, getExtraParams(checkParams));
+        }
+        else if (checkParams.required) {
+            if (checkParams.onFailure === 'setNull') {
+                typeInstance[key] = null;
+            }
+            else if (checkParams.onFailure !== 'ignore') {
+                const error = new InternalError('Field is required', ValidationErrorType.MissingField);
+                error.fields.push(key);
+                throw error;
+            }
+        }
+        if (input && input[key] != null) {
+            try {
+                typeInstance[key] = validateInput(input[key], getExtraParams(checkParams));
+            }
+            catch (e) {
+                if (checkParams.onFailure === 'setNull') {
+                    typeInstance[key] = null;
                 }
-                catch (e) {
-                    if (checkParams.onFailure === 'setNull') {
-                        expectedType[key] = null;
-                    }
-                    else if (checkParams.onFailure !== 'ignore') {
-                        const propertyName = !isNaN(e.index)
-                            ? `${key}[${e.index}]`
-                            : key;
-                        e.fields.unshift(propertyName);
-                        throw e;
-                    }
+                else if (checkParams.onFailure !== 'ignore') {
+                    const propertyName = !isNaN(e.index)
+                        ? `${key}[${e.index}]`
+                        : key;
+                    e.fields.unshift(propertyName);
+                    throw e;
                 }
             }
         }
-        if (input && typeof input === 'object') {
-            for (const uncheckedKey of Object.keys(input).filter((i) => keysToValidate.indexOf(i) < 0)) {
-                expectedType[uncheckedKey] = input[uncheckedKey];
+    }
+    if (input && typeof input === 'object') {
+        for (const uncheckedKey of Object.keys(input).filter((i) => keysToValidate.indexOf(i) < 0)) {
+            typeInstance[uncheckedKey] = input[uncheckedKey];
+        }
+    }
+    else {
+        throwInternalErrorInvalidType(`an instance of ${constructorName}`, JSON.stringify(input));
+    }
+    return typeInstance;
+}
+function validateSimpleObject(constructorName, input, typeInstance, arrayType, extra) {
+    if (constructorName !== 'Object') {
+        const providedType = typeof input;
+        if (constructorName === 'Array') {
+            if (!Array.isArray(input)) {
+                throwInternalErrorInvalidType('array', `${providedType} ${JSON.stringify(input)}`);
+            }
+            for (const [index, item] of input.entries()) {
+                try {
+                    typeInstance.push(arrayType ? validateInput(item, { expectedType: arrayType }) : item);
+                }
+                catch (e) {
+                    e.index = index;
+                    throw e;
+                }
+            }
+            return performExtraValidation(typeInstance, extra);
+        }
+        else if (constructorName === 'Date') {
+            if (input instanceof Date !== true ||
+                typeof input.getTime !== 'function' ||
+                isNaN(input.getTime())) {
+                throwInternalErrorInvalidType('date', `${providedType} ${JSON.stringify(input)}`);
             }
         }
         else {
-            throwInternalErrorInvalidType(`an instance of ${constructorName}`, JSON.stringify(input));
+            typeInstance = typeof typeInstance.valueOf();
+            if (providedType !== typeInstance) {
+                throwInternalErrorInvalidType(typeInstance, `${providedType} ${JSON.stringify(input)}`);
+            }
         }
-        return expectedType;
+    }
+    return performExtraValidation(input, extra);
+}
+function validateInput(input, extra) {
+    const { expectedType, arrayType } = extra, rest = __rest(extra, ["expectedType", "arrayType"]);
+    const parent = getParent(expectedType);
+    if (parent) {
+        input = validateInput(input, Object.assign({ expectedType: parent, arrayType }, rest));
+    }
+    let typeInstance;
+    try {
+        typeInstance = new expectedType();
+    }
+    catch (e) {
+        return input;
+    }
+    const constructorName = typeInstance.constructor.name;
+    if (typeInstance[propertiesToCheck] && typeInstance[propertiesToCheck][constructorName]) {
+        return validateComplexObject(constructorName, input, typeInstance);
     }
     else {
-        if (constructorName !== 'Object') {
-            const providedType = typeof input;
-            if (constructorName === 'Array') {
-                if (!Array.isArray(input)) {
-                    throwInternalErrorInvalidType('array', `${providedType} ${JSON.stringify(input)}`);
-                }
-                for (const [index, item] of input.entries()) {
-                    try {
-                        expectedType.push(arrayType ? validateInput(item, arrayType, undefined, {}) : item);
-                    }
-                    catch (e) {
-                        e.index = index;
-                        throw e;
-                    }
-                }
-                return performExtraValidation(expectedType, extra);
-            }
-            else if (constructorName === 'Date') {
-                if (input instanceof Date !== true ||
-                    typeof input.getTime !== 'function' ||
-                    isNaN(input.getTime())) {
-                    throwInternalErrorInvalidType('date', `${providedType} ${JSON.stringify(input)}`);
-                }
-            }
-            else {
-                expectedType = typeof expectedType.valueOf();
-                if (providedType !== expectedType) {
-                    throwInternalErrorInvalidType(expectedType, `${providedType} ${JSON.stringify(input)}`);
-                }
-            }
-        }
-        return performExtraValidation(input, extra);
+        return validateSimpleObject(constructorName, input, typeInstance, arrayType, extra);
     }
 }
 function validate(input, expectedType, arrayType = null) {
     try {
-        return validateInput(input, expectedType, arrayType, {});
+        return validateInput(input, { expectedType, arrayType });
     }
     catch (err) {
         const e = err;
